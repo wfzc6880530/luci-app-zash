@@ -29,6 +29,15 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sdk"
           tar --zstd -xf /tmp/immortalwrt-sdk.tar.zst -C "$RUNNER_TEMP/sdk" --strip-components=1
 
+      - name: Prepare SDK feeds and configuration
+        working-directory: ${{ runner.temp }}/sdk
+        env:
+          TERM: xterm
+        run: |
+          ./scripts/feeds update luci packages
+          ./scripts/feeds install luci-base nginx
+          make defconfig
+
       - name: Copy package source
         run: |
           mkdir -p "$RUNNER_TEMP/sdk/package/luci-app-zash"
@@ -36,7 +45,10 @@ jobs:
 
       - name: Build IPK
         working-directory: ${{ runner.temp }}/sdk
+        env:
+          TERM: xterm
         run: |
+          make defconfig
           make package/luci-app-zash/compile V=s
 
       - name: Upload IPK
