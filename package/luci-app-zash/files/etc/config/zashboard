@@ -1,0 +1,5 @@
+config zashboard 'main'
+	option enabled '1'
+	option listen_port '8088'
+	option controller_host '127.0.0.1'
+	option controller_port '9090'
