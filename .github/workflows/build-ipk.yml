@@ -1,0 +1,49 @@
+name: Build ImmortalWrt IPK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - "package/**"
+      - ".github/workflows/build-ipk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install SDK tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd build-essential ccache ecj fastjar file g++ gawk gettext git java-propose-classpath libelf-dev libncurses-dev libssl-dev python3 python3-setuptools rsync unzip wget xsltproc
+
+      - name: Download ImmortalWrt 24.10.5 SDK
+        run: |
+          wget -q https://downloads.immortalwrt.org/releases/24.10.5/targets/ipq40xx/generic/immortalwrt-sdk-24.10.5-ipq40xx-generic_gcc-13.3.0_musl_eabi.Linux-x86_64.tar.zst -O /tmp/immortalwrt-sdk.tar.zst
+          mkdir -p "$RUNNER_TEMP/sdk"
+          tar --zstd -xf /tmp/immortalwrt-sdk.tar.zst -C "$RUNNER_TEMP/sdk" --strip-components=1
+
+      - name: Copy package source
+        run: |
+          mkdir -p "$RUNNER_TEMP/sdk/package/luci-app-zash"
+          cp -a package/luci-app-zash/. "$RUNNER_TEMP/sdk/package/luci-app-zash/"
+
+      - name: Build IPK
+        working-directory: ${{ runner.temp }}/sdk
+        run: |
+          make package/luci-app-zash/compile V=s
+
+      - name: Upload IPK
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-zash-ipk-ipq40xx-generic
+          path: |
+            ${{ runner.temp }}/sdk/bin/packages/**/luci-app-zash_*.ipk
+          if-no-files-found: error
+          retention-days: 14
