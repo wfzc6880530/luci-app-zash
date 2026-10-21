@@ -29,11 +29,18 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sdk"
           tar --zstd -xf /tmp/immortalwrt-sdk.tar.zst -C "$RUNNER_TEMP/sdk" --strip-components=1
 
-      - name: Prepare SDK feeds and configuration
+      - name: Prepare release-matched feeds
         working-directory: ${{ runner.temp }}/sdk
         env:
           TERM: xterm
         run: |
+          set -eux
+          cat feeds.conf.default
+          # Use the same stable release branch as the ImmortalWrt 24.10.5 SDK;
+          # avoid pulling current LuCI master sources into a 24.10 release build.
+          sed -i -E 's#(src-git[[:space:]]+luci[[:space:]]+[^;[:space:]]+)(;[^[:space:]]*)?#\1;openwrt-24.10#' feeds.conf.default
+          sed -i -E 's#(src-git[[:space:]]+packages[[:space:]]+[^;[:space:]]+)(;[^[:space:]]*)?#\1;openwrt-24.10#' feeds.conf.default
+          cat feeds.conf.default
           ./scripts/feeds update luci packages
           ./scripts/feeds install luci-base nginx
           make defconfig
@@ -48,6 +55,7 @@ jobs:
         env:
           TERM: xterm
         run: |
+          set -eux
           make defconfig
           make package/luci-app-zash/compile V=s
 
