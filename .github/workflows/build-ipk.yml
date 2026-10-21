@@ -38,8 +38,10 @@ jobs:
           cat feeds.conf.default
           # Use the same stable release branch as the ImmortalWrt 24.10.5 SDK;
           # avoid pulling current LuCI master sources into a 24.10 release build.
-          sed -i -E 's#(src-git[[:space:]]+luci[[:space:]]+[^;[:space:]]+)(;[^[:space:]]*)?#\1;openwrt-24.10#' feeds.conf.default
-          sed -i -E 's#(src-git[[:space:]]+packages[[:space:]]+[^;[:space:]]+)(;[^[:space:]]*)?#\1;openwrt-24.10#' feeds.conf.default
+          # SDK feed URLs include pinned commits using the ^<sha> suffix.
+          # Replace the entire feed lines so the commit suffix is not mistaken for part of the URL.
+          sed -i -E 's#^src-git[[:space:]]+luci[[:space:]].*#src-git luci https://github.com/immortalwrt/luci.git;openwrt-24.10#' feeds.conf.default
+          sed -i -E 's#^src-git[[:space:]]+packages[[:space:]].*#src-git packages https://github.com/immortalwrt/packages.git;openwrt-24.10#' feeds.conf.default
           cat feeds.conf.default
           ./scripts/feeds update luci packages
           ./scripts/feeds install luci-base nginx
