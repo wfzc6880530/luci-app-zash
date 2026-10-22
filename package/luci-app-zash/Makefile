@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-zash
-PKG_VERSION:=1.2.0
+PKG_VERSION:=1.2.1
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=wfzc6880530
@@ -19,8 +19,8 @@ define Package/luci-app-zash
 endef
 
 define Package/luci-app-zash/description
-Bundles Zashboard and adds HTTPS same-origin Nginx routes for /zashboard/ and
-/clash/, proxying the Mihomo API to 127.0.0.1:9090 on the router itself.
+Bundles Zashboard with a port-preserving LuCI entry and same-origin Nginx API proxy
+for deployments where the active Nginx server includes zashboard.locations.
 endef
 
 define Build/Compile
