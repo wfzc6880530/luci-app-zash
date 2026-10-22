@@ -1,5 +1,6 @@
-# Included by the HTTPS server in /etc/nginx/uci.conf.
-# Keep the UI and Mihomo API on the same public origin; do not expose :9090.
+# Included by the router's active Nginx HTTP/HTTPS server.
+# Keep UI and Mihomo API on the same origin. Browser requests to /clash/
+# are reverse-proxied locally; never expose :9090 directly to the client.
 location ^~ /zashboard/ {
     alias /www/dualweb/zashboard/;
     index index.html;
