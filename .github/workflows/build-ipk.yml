@@ -18,10 +18,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # Bundle the official Zashboard static UI into the IPK. The router's
-      # existing Nginx/DualWeb serves it under /zashboard/ and proxies /clash/
-      # to the local Mihomo controller, so clients use the current origin.
-      - name: Download Zashboard frontend
+      - name: Download official Zashboard frontend
         shell: bash
         run: |
           set -euxo pipefail
@@ -29,17 +26,12 @@ jobs:
           ZIP="$RUNNER_TEMP/zashboard-dist.zip"
           DEST="package/luci-app-zash/files/www/dualweb/zashboard"
           mkdir -p "$ASSET_TMP" "$DEST"
-          curl -fL --retry 3 \
-            https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip \
-            -o "$ZIP"
+          curl -fL --retry 3 https://github.com/Zephyruso/zashboard/releases/latest/download/dist-no-fonts.zip -o "$ZIP"
           unzip -q "$ZIP" -d "$ASSET_TMP"
           INDEX="$(find "$ASSET_TMP" -type f -name index.html -print -quit)"
           test -n "$INDEX"
-          ASSET_ROOT="$(dirname "$INDEX")"
-          cp -a "$ASSET_ROOT/." "$DEST/"
-          curl -fL --retry 3 \
-            https://raw.githubusercontent.com/Zephyruso/zashboard/main/LICENSE \
-            -o "$DEST/LICENSE"
+          cp -a "$(dirname "$INDEX")/." "$DEST/"
+          curl -fL --retry 3 https://raw.githubusercontent.com/Zephyruso/zashboard/main/LICENSE -o "$DEST/LICENSE"
           test -s "$DEST/index.html"
 
       - name: Build architecture-independent IPK
@@ -47,58 +39,52 @@ jobs:
         run: |
           set -euxo pipefail
           PKG="luci-app-zash"
-          VERSION="1.1.0-1"
+          VERSION="1.2.0-1"
           ROOT="$RUNNER_TEMP/ipk-root"
           OUT="$RUNNER_TEMP/ipk-out"
           CONTROL_DIR="$RUNNER_TEMP/control"
-          mkdir -p "$ROOT/usr/lib/lua/luci/controller" \
-            "$ROOT/www/dualweb/zashboard" "$OUT" "$CONTROL_DIR"
+          mkdir -p "$ROOT/usr/lib/lua/luci/controller" "$ROOT/www/dualweb/zashboard" "$ROOT/etc/nginx/conf.d" "$OUT" "$CONTROL_DIR"
 
-          install -m 0644 package/luci-app-zash/files/usr/lib/lua/luci/controller/zashboard.lua \
-            "$ROOT/usr/lib/lua/luci/controller/zashboard.lua"
-          cp -a package/luci-app-zash/files/www/dualweb/zashboard/. \
-            "$ROOT/www/dualweb/zashboard/"
+          install -m 0644 package/luci-app-zash/files/usr/lib/lua/luci/controller/zashboard.lua "$ROOT/usr/lib/lua/luci/controller/zashboard.lua"
+          cp -a package/luci-app-zash/files/www/dualweb/zashboard/. "$ROOT/www/dualweb/zashboard/"
+          install -m 0644 package/luci-app-zash/files/etc/nginx/conf.d/zashboard.locations "$ROOT/etc/nginx/conf.d/zashboard.locations"
 
           cat > "$CONTROL_DIR/control" <<'CONTROL'
           Package: luci-app-zash
-          Version: 1.1.0-1
+          Version: 1.2.0-1
           Depends: luci-base, nginx
           Architecture: all
           Section: luci
           Priority: optional
           Maintainer: wfzc6880530
-          Description: LuCI Zashboard integration with same-origin Mihomo API proxy.
+          Description: Zashboard bundled UI with HTTPS same-origin Mihomo API reverse proxy.
           CONTROL
 
-          # Stop and remove the legacy standalone :8088 proxy during upgrade.
           cat > "$CONTROL_DIR/postinst" <<'POSTINST'
           #!/bin/sh
           [ -n "${IPKG_INSTROOT:-}" ] && exit 0
-          ubus call service delete '{"name":"zashboard-nginx"}' >/dev/null 2>&1 || true
-          if [ -r /var/run/zashboard-nginx/nginx.pid ]; then
-            oldpid="$(cat /var/run/zashboard-nginx/nginx.pid 2>/dev/null)"
-            case "$oldpid" in
-              ''|*[!0-9]*) ;;
-              *) kill -QUIT "$oldpid" 2>/dev/null || true ;;
-            esac
-          fi
+
+          # Stop/remove legacy standalone :8088 service; preserve the old config
+          # file so the user can restore it manually if needed.
+          /etc/init.d/zashboard-nginx stop >/dev/null 2>&1 || true
+          /etc/init.d/zashboard-nginx disable >/dev/null 2>&1 || true
           rm -f /etc/rc.d/S95zashboard-nginx /etc/rc.d/K10zashboard-nginx
-          rm -f /etc/init.d/zashboard-nginx
-          rm -f /var/etc/zashboard-nginx.conf
+          rm -f /etc/init.d/zashboard-nginx /var/etc/zashboard-nginx.conf
           rm -rf /var/run/zashboard-nginx
+
+          # Validate before reload. The active config on this target is uci.conf.
+          if [ -x /usr/sbin/nginx ] && /usr/sbin/nginx -t -c /etc/nginx/uci.conf >/dev/null 2>&1; then
+            /etc/init.d/nginx reload >/dev/null 2>&1 || killall -HUP nginx 2>/dev/null || true
+          fi
           exit 0
           POSTINST
           chmod 0755 "$CONTROL_DIR/postinst"
 
           printf '2.0\n' > "$CONTROL_DIR/debian-binary"
-          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/control.tar.gz" \
-            -C "$CONTROL_DIR" control postinst
-          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/data.tar.gz" \
-            -C "$ROOT" .
+          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/control.tar.gz" -C "$CONTROL_DIR" control postinst
+          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/data.tar.gz" -C "$ROOT" .
           cd "$OUT"
-          printf '2.0\n' > debian-binary
-          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/${PKG}_${VERSION}_all.ipk" \
-            debian-binary control.tar.gz data.tar.gz
+          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/${PKG}_${VERSION}_all.ipk" debian-binary control.tar.gz data.tar.gz
           tar -tzf "$OUT/${PKG}_${VERSION}_all.ipk"
           test -s "$OUT/${PKG}_${VERSION}_all.ipk"
 
@@ -106,6 +92,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-zash-ipk-ipq40xx-generic
-          path: ${{ runner.temp }}/ipk-out/luci-app-zash_1.1.0-1_all.ipk
+          path: ${{ runner.temp }}/ipk-out/luci-app-zash_1.2.0-1_all.ipk
           if-no-files-found: error
           retention-days: 14
