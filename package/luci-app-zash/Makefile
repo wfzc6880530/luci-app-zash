@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-zash
-PKG_VERSION:=1.1.0
+PKG_VERSION:=1.2.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=wfzc6880530
@@ -19,9 +19,8 @@ define Package/luci-app-zash
 endef
 
 define Package/luci-app-zash/description
-Bundles the Zashboard frontend and adds a LuCI shortcut using the existing Nginx
-/zashboard/ static path and /clash/ same-origin Mihomo API proxy. The build
-workflow downloads the upstream frontend before packaging.
+Bundles Zashboard and adds HTTPS same-origin Nginx routes for /zashboard/ and
+/clash/, proxying the Mihomo API to 127.0.0.1:9090 on the router itself.
 endef
 
 define Build/Compile
@@ -33,6 +32,8 @@ define Package/luci-app-zash/install
 	$(INSTALL_DIR) $(1)/www/dualweb/zashboard
 	test -s ./files/www/dualweb/zashboard/index.html
 	$(CP) ./files/www/dualweb/zashboard/. $(1)/www/dualweb/zashboard/
+	$(INSTALL_DIR) $(1)/etc/nginx/conf.d
+	$(INSTALL_DATA) ./files/etc/nginx/conf.d/zashboard.locations $(1)/etc/nginx/conf.d/zashboard.locations
 endef
 
 $(eval $(call BuildPackage,luci-app-zash))
