@@ -14,8 +14,15 @@ end
 function action_index()
 	local http = require "luci.http"
 
-	-- Use a relative URL so the browser keeps the exact current origin:
-	-- scheme, public hostname, and port (including :8080 when present).
-	-- Never redirect to a hard-coded LAN address or silently drop :8080.
-	http.redirect("/zashboard/#/proxies?secondaryPath=/clash")
+	-- The plugin's standalone Nginx server listens on 8081. Keep the
+	-- existing LuCI/uhttpd listener on 8080 and the firmware's :80 site intact.
+	local host = http.getenv("HTTP_HOST") or http.getenv("SERVER_NAME") or "192.168.1.1"
+	-- Strip the incoming port so the plugin port is always used.
+	host = host:gsub(":%d+$", "")
+	-- Prevent malformed Host headers from being reflected into a redirect.
+	if not host:match("^[%w%.%-%[%]:]+$") then
+		host = "192.168.1.1"
+	end
+
+	http.redirect("http://" .. host .. ":8081/zashboard/#/proxies?secondaryPath=/clash")
 end
