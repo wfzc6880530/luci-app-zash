@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-zash
-PKG_VERSION:=1.2.2
+PKG_VERSION:=1.2.3
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=wfzc6880530
@@ -19,8 +19,8 @@ define Package/luci-app-zash
 endef
 
 define Package/luci-app-zash/description
-Bundles Zashboard with a port-preserving LuCI entry and same-origin Nginx API proxy
-for deployments where the active Nginx server includes zashboard.locations.
+Bundles Zashboard with a LuCI entry that redirects to the router's existing HTTP/HTTPS
+origin; the /clash/ path reverse-proxies to the local Mihomo API.
 endef
 
 define Build/Compile
@@ -34,7 +34,6 @@ define Package/luci-app-zash/install
 	$(CP) ./files/www/dualweb/zashboard/. $(1)/www/dualweb/zashboard/
 	$(INSTALL_DIR) $(1)/etc/nginx/conf.d
 	$(INSTALL_DATA) ./files/etc/nginx/conf.d/zashboard.locations $(1)/etc/nginx/conf.d/zashboard.locations
-	$(INSTALL_DATA) ./files/etc/nginx/conf.d/zashboard-standalone.conf $(1)/etc/nginx/conf.d/zashboard-standalone.conf
 endef
 
 $(eval $(call BuildPackage,luci-app-zash))
