@@ -14,15 +14,21 @@ end
 function action_index()
 	local http = require "luci.http"
 
-	-- The plugin's standalone Nginx server listens on 8081. Keep the
-	-- existing LuCI/uhttpd listener on 8080 and the firmware's :80 site intact.
+	-- Use the same host and scheme as the current request, but let the
+	-- router's existing :80/:443 reverse-proxy path serve the UI and API.
+	-- Never send browser requests to 127.0.0.1:9090 or a standalone port.
 	local host = http.getenv("HTTP_HOST") or http.getenv("SERVER_NAME") or "192.168.1.1"
-	-- Strip the incoming port so the plugin port is always used.
+	-- Remove an optional port, including the usual :8080 LuCI port.
 	host = host:gsub(":%d+$", "")
-	-- Prevent malformed Host headers from being reflected into a redirect.
 	if not host:match("^[%w%.%-%[%]:]+$") then
 		host = "192.168.1.1"
 	end
 
-	http.redirect("http://" .. host .. ":8081/zashboard/#/proxies?secondaryPath=/clash")
+	local scheme = http.getenv("HTTP_X_FORWARDED_PROTO") or http.getenv("REQUEST_SCHEME") or "http"
+	-- Only accept standard schemes to avoid reflecting an arbitrary header.
+	if scheme ~= "http" and scheme ~= "https" then
+		scheme = "http"
+	end
+
+	http.redirect(scheme .. "://" .. host .. "/zashboard/#/proxies?secondaryPath=/clash")
 end
