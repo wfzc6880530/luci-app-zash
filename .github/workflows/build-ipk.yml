@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euxo pipefail
           PKG="luci-app-zash"
-          VERSION="1.2.1-1"
+          VERSION="1.2.2-1"
           ROOT="$RUNNER_TEMP/ipk-root"
           OUT="$RUNNER_TEMP/ipk-out"
           CONTROL_DIR="$RUNNER_TEMP/control"
@@ -48,10 +48,11 @@ jobs:
           install -m 0644 package/luci-app-zash/files/usr/lib/lua/luci/controller/zashboard.lua "$ROOT/usr/lib/lua/luci/controller/zashboard.lua"
           cp -a package/luci-app-zash/files/www/dualweb/zashboard/. "$ROOT/www/dualweb/zashboard/"
           install -m 0644 package/luci-app-zash/files/etc/nginx/conf.d/zashboard.locations "$ROOT/etc/nginx/conf.d/zashboard.locations"
+          install -m 0644 package/luci-app-zash/files/etc/nginx/conf.d/zashboard-standalone.conf "$ROOT/etc/nginx/conf.d/zashboard-standalone.conf"
 
           cat > "$CONTROL_DIR/control" <<'CONTROL'
           Package: luci-app-zash
-          Version: 1.2.1-1
+          Version: 1.2.2-1
           Depends: luci-base, nginx
           Architecture: all
           Section: luci
@@ -101,6 +102,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-zash-ipk-ipq40xx-generic
-          path: ${{ runner.temp }}/ipk-out/luci-app-zash_1.2.1-1_all.ipk
+          path: ${{ runner.temp }}/ipk-out/luci-app-zash_1.2.2-1_all.ipk
           if-no-files-found: error
           retention-days: 14
