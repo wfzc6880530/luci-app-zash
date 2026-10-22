@@ -83,9 +83,19 @@ jobs:
           printf '2.0\n' > "$CONTROL_DIR/debian-binary"
           tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/control.tar.gz" -C "$CONTROL_DIR" control postinst
           tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/data.tar.gz" -C "$ROOT" .
-          cd "$OUT"
-          tar --format=gnu --numeric-owner --owner=0 --group=0 -czf "$OUT/${PKG}_${VERSION}_all.ipk" debian-binary control.tar.gz data.tar.gz
-          tar -tzf "$OUT/${PKG}_${VERSION}_all.ipk"
+          # IPK is an ar archive, not a tar.gz archive.
+          # Keep the required member order: debian-binary, control.tar.gz, data.tar.gz.
+          cp "$CONTROL_DIR/debian-binary" "$OUT/debian-binary"
+          (
+            cd "$OUT"
+            ar r "${PKG}_${VERSION}_all.ipk" debian-binary control.tar.gz data.tar.gz
+          )
+          ar t "$OUT/${PKG}_${VERSION}_all.ipk"
+          ar t "$OUT/${PKG}_${VERSION}_all.ipk" | grep -Fxq debian-binary
+          ar t "$OUT/${PKG}_${VERSION}_all.ipk" | grep -Fxq control.tar.gz
+          ar t "$OUT/${PKG}_${VERSION}_all.ipk" | grep -Fxq data.tar.gz
+          tar -tzf "$OUT/control.tar.gz" >/dev/null
+          tar -tzf "$OUT/data.tar.gz" >/dev/null
           test -s "$OUT/${PKG}_${VERSION}_all.ipk"
 
       - name: Upload IPK
