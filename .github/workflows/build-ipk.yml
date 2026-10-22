@@ -101,6 +101,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-zash-ipk-ipq40xx-generic
-          path: ${{ runner.temp }}/ipk-out/luci-app-zash_1.2.2-1_all.ipk
+          path: ${{ runner.temp }}/ipk-out/luci-app-zash_1.2.3-1_all.ipk
           if-no-files-found: error
           retention-days: 14
