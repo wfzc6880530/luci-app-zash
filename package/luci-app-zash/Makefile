@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-zash
-PKG_VERSION:=1.2.1
+PKG_VERSION:=1.2.2
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=wfzc6880530
@@ -34,6 +34,7 @@ define Package/luci-app-zash/install
 	$(CP) ./files/www/dualweb/zashboard/. $(1)/www/dualweb/zashboard/
 	$(INSTALL_DIR) $(1)/etc/nginx/conf.d
 	$(INSTALL_DATA) ./files/etc/nginx/conf.d/zashboard.locations $(1)/etc/nginx/conf.d/zashboard.locations
+	$(INSTALL_DATA) ./files/etc/nginx/conf.d/zashboard-standalone.conf $(1)/etc/nginx/conf.d/zashboard-standalone.conf
 endef
 
 $(eval $(call BuildPackage,luci-app-zash))
